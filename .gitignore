@@ -1,0 +1,6 @@
+dump/*.dump
+dump/*.sql
+*.pyc
+__pycache__/
+.env
+venv/

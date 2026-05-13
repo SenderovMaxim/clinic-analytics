@@ -1,53 +1,53 @@
 from sqlalchemy import text
 
-# ЗАПРОС 1: Выручка врача (Упрощенный - без сложных связей с процедурами)
+# ЗАПРОС 1: Выручка врача (Только платежи в дни приемов)
 REVENUE_QUERY = text("""
-WITH doctor_appointments AS (
-    -- Находим все приемы врачей за период через расписание
+WITH doctor_visits AS (
+    -- Находим все приемы врачей за период
     SELECT 
         ss.doctor_id,
-        a.id as appointment_id,
         a.patient_id,
-        a.start_time
+        DATE(a.start_time) as visit_date
     FROM appointments_appointment a
     JOIN schedules_schedule ss ON a.schedule_id = ss.id
     WHERE ss.doctor_id IS NOT NULL
       AND a.start_time >= :start_date 
       AND a.start_time <= :end_date
 ),
-doctor_revenue_data AS (
-    -- Считаем выручку (транзакции в день приема)
+visit_revenue AS (
+    -- Находим платежи, сделанные в эти даты этими пациентами
     SELECT 
-        da.doctor_id,
-        COALESCE(SUM(t.amount), 0) as total_revenue,
-        COUNT(DISTINCT t.id) as transaction_count,
-        COUNT(DISTINCT da.patient_id) as unique_patients
-    FROM doctor_appointments da
-    LEFT JOIN patients_transaction t ON t.patient_id = da.patient_id 
-        AND DATE(t.created_at) = DATE(da.start_time)
-        AND t.is_voided = false 
-        AND t.amount > 0
-    GROUP BY da.doctor_id
+        dv.doctor_id,
+        t.id as transaction_id,
+        t.amount,
+        dv.patient_id
+    FROM doctor_visits dv
+    JOIN patients_transaction t ON t.patient_id = dv.patient_id
+        AND DATE(t.created_at) = dv.visit_date -- Платеж строго в день приема!
+    WHERE t.is_voided = false AND t.amount > 0
 ),
-all_doctors_stats AS (
-    -- Общая статистика по пациентам и визитам
+doctor_stats AS (
     SELECT 
         doctor_id,
-        COUNT(DISTINCT patient_id) as unique_patients,
-        COUNT(appointment_id) as total_visits
-    FROM doctor_appointments
+        SUM(amount) as total_revenue,
+        COUNT(DISTINCT transaction_id) as total_procedures,
+        COUNT(DISTINCT patient_id) as unique_patients
+    FROM visit_revenue
     GROUP BY doctor_id
+),
+all_doctors_in_period AS (
+    SELECT DISTINCT doctor_id FROM doctor_visits
 )
 SELECT 
     u.id as doctor_id,
     COALESCE(uep.short_name, u.first_name || ' ' || u.last_name) as doctor_name,
-    drd.total_revenue,
-    drd.transaction_count as total_procedures, -- Используем кол-во транзакций как реализации
-    ads.unique_patients as patient_count
-FROM all_doctors_stats ads
-JOIN auth_user u ON ads.doctor_id = u.id
+    COALESCE(ds.total_revenue, 0) as total_revenue,
+    COALESCE(ds.total_procedures, 0) as total_procedures,
+    COALESCE(ds.unique_patients, 0) as patient_count
+FROM all_doctors_in_period ad
+JOIN auth_user u ON ad.doctor_id = u.id
 LEFT JOIN users_employeeprofile uep ON u.id = uep.user_id
-LEFT JOIN doctor_revenue_data drd ON ads.doctor_id = drd.doctor_id
+LEFT JOIN doctor_stats ds ON ad.doctor_id = ds.doctor_id
 ORDER BY total_revenue DESC
 """)
 

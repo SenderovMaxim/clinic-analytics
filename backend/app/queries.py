@@ -2,25 +2,33 @@ from sqlalchemy import text
 
 # ЗАПРОС 1: Выручка врача
 # Цепочка: Транзакция -> Этап плана лечения -> Прием -> Врач
+# ЗАПРОС 1: Выручка врача (исправленный)
+# Добавлено условие AND t.amount > 0, чтобы исключить возвраты и корректировки
+# ЗАПРОС 1: Выручка врача (для тестирования - без фильтра по датам)
+# ЗАПРОС 1: Выручка врача (ЧЕРЕЗ ПАЦИЕНТОВ)
+# Считаем сумму всех успешных транзакций пациентов, которые ходили к этому врачу
 REVENUE_QUERY = text("""
+WITH doctor_patients AS (
+    SELECT DISTINCT a.patient_id, a.created_by_id as doctor_id
+    FROM appointments_appointment a
+    WHERE a.created_by_id IS NOT NULL
+)
 SELECT 
     u.id as doctor_id,
     u.first_name || ' ' || u.last_name as doctor_name,
     COALESCE(SUM(t.amount), 0) as total_revenue
-FROM patients_transaction t
-JOIN appointments_treatmentplanstage ts ON t.treatment_stage_id = ts.id
-JOIN appointments_appointment a ON ts.appointment_id = a.id
-JOIN auth_user u ON a.created_by_id = u.id
-WHERE t.is_voided = false          -- Исключаем отмененные транзакции
-  AND ts.is_voided = false         -- Исключаем отмененные этапы лечения
-  AND a.start_time >= :start_date 
-  AND a.start_time <= :end_date
+FROM doctor_patients dp
+JOIN auth_user u ON dp.doctor_id = u.id
+JOIN patients_transaction t ON t.patient_id = dp.patient_id
+WHERE t.is_voided = false
+  AND t.amount > 0  -- Только приход денег
 GROUP BY u.id, u.first_name, u.last_name
 ORDER BY total_revenue DESC
 """)
 
 # ЗАПРОС 2: Перенаправляемость
 # Логика: находим первичный прием врача А, затем ищем любые другие приемы этого пациента у врачей Б, В, Г...
+# ЗАПРОС 2: Перенаправляемость (для тестирования - без фильтра по датам)
 REFERRAL_QUERY = text("""
 WITH primary_visits AS (
     SELECT 
@@ -28,7 +36,7 @@ WITH primary_visits AS (
         a.patient_id, 
         MIN(a.start_time) as first_visit_time
     FROM appointments_appointment a
-    WHERE a.start_time >= :start_date AND a.start_time <= :end_date
+    -- WHERE a.start_time >= :start_date AND a.start_time <= :end_date  -- Закомментировано
     GROUP BY a.created_by_id, a.patient_id
 ),
 subsequent_other_doctors AS (

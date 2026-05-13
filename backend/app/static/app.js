@@ -67,25 +67,27 @@ function renderTable(data) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
-    if (data.referrals.length === 0) {
+    if (!data.referrals || data.referrals.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6">Нет данных за выбранный период</td></tr>';
         return;
     }
 
     data.referrals.forEach((r, i) => {
-        // Находим данные по выручке и реализациям для этого врача
-        const revData = data.revenue.find(item => item.doctor_id === r.doctor_id);
-        const revenue = revData ? revData.total_revenue : 0;
-        const procedures = revData ? revData.total_procedures : 0;
+        // Ищем данные по выручке для этого врача
+        const revData = data.revenue ? data.revenue.find(item => item.doctor_id === r.doctor_id) : null;
+
+        // Безопасное получение значений с проверкой на undefined/null
+        const revenue = revData && revData.total_revenue !== undefined ? revData.total_revenue : 0;
+        const procedures = revData && revData.total_procedures !== undefined ? revData.total_procedures : 0;
 
         tbody.innerHTML += `
             <tr>
-                <td>${r.doctor_name}</td>
-                <td>${revenue.toLocaleString('ru-RU')}</td>
-                <td>${procedures.toLocaleString('ru-RU')}</td> 
-                <td>${r.total_patients}</td>
-                <td>${r.referred_patients}</td>
-                <td>${r.referral_rate_pct}%</td>
+                <td>${r.doctor_name || 'Не указано'}</td>
+                <td>${Number(revenue).toLocaleString('ru-RU')}</td>
+                <td>${Number(procedures).toLocaleString('ru-RU')}</td>
+                <td>${r.total_patients || 0}</td>
+                <td>${r.referred_patients || 0}</td>
+                <td>${r.referral_rate_pct !== undefined ? r.referral_rate_pct : 0}%</td>
             </tr>
         `;
     });

@@ -68,16 +68,21 @@ function renderTable(data) {
     tbody.innerHTML = '';
 
     if (data.referrals.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Нет данных за выбранный период</td></tr>';
         return;
     }
 
     data.referrals.forEach((r, i) => {
-        const rev = data.revenue.find(item => item.doctor_id === r.doctor_id)?.total_revenue || 0;
+        // Находим данные по выручке и реализациям для этого врача
+        const revData = data.revenue.find(item => item.doctor_id === r.doctor_id);
+        const revenue = revData ? revData.total_revenue : 0;
+        const procedures = revData ? revData.total_procedures : 0;
+
         tbody.innerHTML += `
             <tr>
                 <td>${r.doctor_name}</td>
-                <td>${rev.toLocaleString('ru-RU')}</td>
+                <td>${revenue.toLocaleString('ru-RU')}</td>
+                <td>${procedures.toLocaleString('ru-RU')}</td> 
                 <td>${r.total_patients}</td>
                 <td>${r.referred_patients}</td>
                 <td>${r.referral_rate_pct}%</td>

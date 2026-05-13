@@ -1,0 +1,9 @@
+body { font-family: sans-serif; padding: 20px; }
+header { margin-bottom: 20px; }
+.controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+.charts { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.card { background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 45%; min-width: 300px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #f2f2f2; }
+tr:nth-child(even) { background-color: #f9f9f9; }

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аналитика врачей</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header><h1>📊 Аналитика врачей</h1></header>
+  <main>
+    <div class="controls">
+      <label>С <input type="date" id="start"></label>
+      <label>По <input type="date" id="end"></label>
+      <button onclick="loadData()">Сформировать отчёт</button>
+    </div>
+    <div class="charts">
+      <div class="card"><canvas id="revenueChart"></canvas></div>
+      <div class="card"><canvas id="referralChart"></canvas></div>
+    </div>
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead><tr><th>Врач</th><th>Выручка</th><th>Пациентов</th><th>Перенаправлено</th><th>% рефералов</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

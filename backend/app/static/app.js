@@ -22,6 +22,8 @@ async function loadData() {
 }
 
 function renderCharts(data) {
+    if (!data.revenue || !data.referrals) return;
+
     const labels = data.revenue.map(d => d.doctor_name);
     const revenueData = data.revenue.map(d => d.total_revenue);
     const referralData = data.referrals.map(d => d.referral_rate_pct);
@@ -32,11 +34,11 @@ function renderCharts(data) {
         if (revChart) revChart.destroy();
         revChart = new Chart(ctxRev, {
             type: 'bar',
-            data: {  // <--- ДОБАВЛЕНО КЛЮЧЕВОЕ СЛОВО data:
+            data: {
                 labels: labels,
                 datasets: [{
                     label: 'Выручка (₽)',
-                    data: revenueData, // <--- ДОБАВЛЕНО КЛЮЧЕВОЕ СЛОВО data:
+                    data: revenueData,
                     backgroundColor: '#4f46e5'
                 }]
             },
@@ -50,11 +52,11 @@ function renderCharts(data) {
         if (refChart) refChart.destroy();
         refChart = new Chart(ctxRef, {
             type: 'doughnut',
-            data: {  // <--- ДОБАВЛЕНО КЛЮЧЕВОЕ СЛОВО data:
+            data: {
                 labels: labels,
                 datasets: [{
                     label: '% рефералов',
-                    data: referralData, // <--- ДОБАВЛЕНО КЛЮЧЕВОЕ СЛОВО data:
+                    data: referralData,
                     backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
                 }]
             },
@@ -72,13 +74,21 @@ function renderTable(data) {
         return;
     }
 
+    let totalRevenue = 0;
+    let totalProcedures = 0;
+    let totalPatients = 0;
+    let totalReferred = 0;
+
     data.referrals.forEach((r, i) => {
-        // Ищем данные по выручке для этого врача
         const revData = data.revenue ? data.revenue.find(item => item.doctor_id === r.doctor_id) : null;
 
-        // Безопасное получение значений с проверкой на undefined/null
         const revenue = revData && revData.total_revenue !== undefined ? revData.total_revenue : 0;
         const procedures = revData && revData.total_procedures !== undefined ? revData.total_procedures : 0;
+
+        totalRevenue += revenue;
+        totalProcedures += procedures;
+        totalPatients += (r.total_patients || 0);
+        totalReferred += (r.referred_patients || 0);
 
         tbody.innerHTML += `
             <tr>
@@ -91,6 +101,17 @@ function renderTable(data) {
             </tr>
         `;
     });
+
+    tbody.innerHTML += `
+        <tr style="font-weight: bold; background-color: #e2e8f0;">
+            <td>ИТОГО</td>
+            <td>${totalRevenue.toLocaleString('ru-RU')}</td>
+            <td>${totalProcedures.toLocaleString('ru-RU')}</td>
+            <td>${totalPatients.toLocaleString('ru-RU')}</td>
+            <td>${totalReferred.toLocaleString('ru-RU')}</td>
+            <td>-</td>
+        </tr>
+    `;
 }
 
 window.onload = loadData;

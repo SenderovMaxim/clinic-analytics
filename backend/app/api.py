@@ -1,30 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from .db import get_db
-from .queries import REVENUE_QUERY, REFERRAL_QUERY
-from datetime import datetime
+from .queries import get_revenue_data, get_referral_data
 
 router = APIRouter()
 
 
 @router.get("/api/analytics")
 def get_analytics(
-        start_date: str = Query(None, description="YYYY-MM-DD"),
-        end_date: str = Query(None, description="YYYY-MM-DD"),
+        start_date: str = Query(...),
+        end_date: str = Query(...),
         db: Session = Depends(get_db)
 ):
-    # Если даты не указаны, берем весь период
-    s = start_date or "2000-01-01"
-    e = end_date or datetime.now().strftime("%Y-%m-%d")
+    revenue_rows = get_revenue_data(db, start_date, end_date)
+    referral_rows = get_referral_data(db, start_date, end_date)
 
-    try:
-        revenue_rows = db.execute(REVENUE_QUERY, {"start_date": s, "end_date": e}).mappings().all()
-        referral_rows = db.execute(REFERRAL_QUERY, {"start_date": s, "end_date": e}).mappings().all()
-
-        return {
-            "period": {"start": s, "end": e},
-            "revenue": [dict(r) for r in revenue_rows],
-            "referrals": [dict(r) for r in referral_rows]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка выполнения запроса: {str(e)}")
+    return {
+        "period": {"start": start_date, "end": end_date},
+        "revenue": [
+            {
+                "doctor_id": row.doctor_id,
+                "doctor_name": row.doctor_name,
+                "total_revenue": float(row.total_revenue) if row.total_revenue else 0,
+                "total_procedures": row.total_procedures,
+                "patient_count": row.patient_count
+            }
+            for row in revenue_rows
+        ],
+        "referrals": [
+            {
+                "doctor_id": row.doctor_id,
+                "doctor_name": row.doctor_name,
+                "total_patients": row.total_patients,
+                "referred_patients": row.referred_patients,
+                "referral_rate_pct": float(row.referral_rate_pct) if row.referral_rate_pct else 0
+            }
+            for row in referral_rows
+        ]
+    }

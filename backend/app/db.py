@@ -1,14 +1,14 @@
-import os
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-# Жесткое ограничение на уровне сессии: все транзакции только для чтения
+DATABASE_URL = "postgresql+psycopg2://cliniciq2_user:cliniciq2_pass@db:5432/cliniciq2_db"
+
 engine = create_engine(
     DATABASE_URL,
     connect_args={"options": "-c default_transaction_read_only=on"},
-    echo=False
+    pool_pre_ping=True
 )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

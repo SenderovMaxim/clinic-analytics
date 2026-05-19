@@ -1,4 +1,4 @@
-from sqlalchemy import func, and_, case, distinct, cast, Date
+from sqlalchemy import func, and_, case, cast, Date
 from .models import Appointment, Schedule, Transaction, User, EmployeeProfile
 
 
@@ -26,8 +26,8 @@ def get_revenue_data(db, start_date: str, end_date: str):
                 func.concat(User.first_name, ' ', User.last_name)
             ).label('doctor_name'),
             func.sum(Transaction.amount).label('total_revenue'),
-            func.count(distinct(Transaction.id)).label('total_procedures'),
-            func.count(distinct(doctor_appointments.c.patient_id)).label('patient_count')
+            func.count(Transaction.id).label('total_procedures'),
+            func.count(doctor_appointments.c.patient_id).label('patient_count')
         )
         .join(doctor_appointments, User.id == doctor_appointments.c.doctor_id)
         .join(
@@ -35,11 +35,11 @@ def get_revenue_data(db, start_date: str, end_date: str):
             and_(
                 Transaction.patient_id == doctor_appointments.c.patient_id,
                 cast(Transaction.created_at, Date) == doctor_appointments.c.visit_date,
-                Transaction.is_voided == False,
+                #Transaction.is_voided == False
                 Transaction.amount > 0
             )
         )
-        .outerjoin(EmployeeProfile, User.id == EmployeeProfile.user_id)
+        .join(EmployeeProfile, User.id == EmployeeProfile.user_id)
         .group_by(User.id, EmployeeProfile.short_name, User.first_name, User.last_name)
         .order_by(func.sum(Transaction.amount).desc())
     )
@@ -79,7 +79,6 @@ def get_referral_data(db, start_date: str, end_date: str):
             Schedule.doctor_id.isnot(None),
             Appointment.start_time > primary_visits.c.first_visit_time
         )
-        .distinct()
         .subquery()
     )
 

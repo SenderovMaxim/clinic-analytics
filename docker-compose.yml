@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: cliniciq2_user
       POSTGRES_PASSWORD: cliniciq2_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./dump:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
